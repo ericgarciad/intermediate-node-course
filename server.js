@@ -6,6 +6,25 @@ const app= express();
 const User=require('./models/User');
 mongoose.connect('mongodb://localhost/userData')
 
+function sendResponse(res,err,data){
+  if (err){
+    res.json({
+      success: false,
+      message: err
+    })
+  } else if (!data){
+    res.json({
+      success: false,
+      message: "Not Found"
+    })
+  } else {
+    res.json({
+      success: true,
+      data: data
+    })
+  }
+}
+
 app.use(bodyParser.json());
 
 app.listen(port, ()=>{
@@ -16,46 +35,20 @@ app.listen(port, ()=>{
 // CREATE
 app.post('/users',(req,res)=>{
   User.create(
-    {
-      name:req.body.newData.name,
-      email:req.body.newData.email,
-      password:req.body.newData.password
-    },
-    (err,data)=>{
-    if (err){
-      res.json({success: false,message: err})
-    } else if (!data){
-      res.json({success: false,message: "Not Found"})
-    } else {
-      res.json({success: true,data: data})
-    }
-  })
+    {...req.body.newData},
+    (err,data)=>{sendResponse(res,err,data)}
+  )
 })
 
-app.route('/users/:id')
 
 /* Genial, tu usuario tiene una identificación de 606c1437e78235381c64cd46. Esto es lo que usaremos en lugar de: id, mientras hacemos las otras solicitudes. busque la ruta "READ" en nuestro archivo de servidor y reemplácela con este código:*/
 
 // READ
+app.route('/users/:id')
 .get((req,res)=>{
-  User.findById(req.params.id,(err,data)=>{
-    if (err){
-      res.json({
-        success: false,
-        message: err
-      })
-    } else if (!data){
-      res.json({
-        success: false,
-        message: "Not Found"
-      })
-    } else {
-      res.json({
-        success: true,
-        data: data
-      })
-    }
-  })
+  User.findById(
+    req.params.id,
+    (err,data)=>{sendResponse(res,err,data)})
 })
 
 /* Si desea actualizar un documento en mongoDB, puede hacerlo con el método User.findByIdAndUpdate. Esto toma tres argumentos (id, newData, callback). La identificación todavía proviene de "req.params", pero newData es un objeto enviado a través de "req.body". Además, de forma predeterminada, el método de actualización devolverá el documento sin modificar. Podemos agregar un argumento de "opciones" antes de la devolución de llamada ( {new:true}) para que devuelva el documento modificado.*/
@@ -64,56 +57,26 @@ app.route('/users/:id')
 .put((req,res)=>{
   User.findByIdAndUpdate(
     req.params.id,
-    {
-      name:req.body.newData.name,
-      email:req.body.newData.email,
-      password:req.body.newData.password
-    },
-    {
-      new:true
-    },
-    (err,data)=>{
-      if (err){
-        res.json({
-          success: false,
-          message: err
-        })
-      } else if (!data){
-        res.json({
-          success: false,
-          message: "Not Found"
-        })
-      } else {
-        res.json({
-          success: true,
-          data: data
-        })
-      }
-    }
-  )
+    {...req.body.newData},
+    {new:true},
+    (err,data)=>{sendResponse(res,err,data)})
 })
 
 // DELETE
 .delete((req,res)=>{
   User.findByIdAndDelete(
     req.params.id,
-    (err,data)=>{
-      if (err){
-        res.json({
-          success: false,
-          message: err
-        })
-      } else if (!data){
-        res.json({
-          success: false,
-          message: "Not Found"
-        })
-      } else {
-        res.json({
-          success: true,
-          data: data
-        })
-      }
-    }
-  )
+    (err,data)=>{sendResponse(res,err,data)})
 })
+
+/* Entonces, en lugar de esto:
+
+{ 
+  nombre : req . cuerpo . newData . nombre , 
+  correo electrónico : req . cuerpo . newData . correo electrónico , 
+  contraseña : req . cuerpo . newData . contraseña 
+}
+
+podemos escribir la siguiente: {...req.body.newData}.
+
+El código anterior es mucho más fácil de mantener. Además, con la sintaxis de propagación solo necesita incluir los valores que se están modificando. En la primera versión buscábamos explícitamente un valor en cada clave para actualizar. Si los valores no se incluyen, se establecerán en "nulo". Ahora nuestras rutas son más flexibles, ya que el objeto a actualizar lo define la solicitud. Esto puede parecer extraño al principio, pero el modelo debe mantener sus datos consistentes.*/
